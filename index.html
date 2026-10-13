@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Getar ESP32 Real-Time</title>
+    <!-- Tailwind CSS untuk mempercantik tampilan secara instan -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MQTT Library untuk koneksi web -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">Monitoring Sensor Getar</h1>
+        
+        <div class="space-y-4">
+            <!-- Kotak Status Lokasi 1 -->
+            <div id="card-lokasi1" class="p-4 rounded-lg border border-gray-200 bg-gray-50 flex justify-between items-center">
+                <div>
+                    <h2 class="font-semibold text-gray-700">ESP32 Lokasi 1</h2>
+                    <p id="status-lokasi1" class="text-sm text-gray-500">Menghubungkan...</p>
+                </div>
+                <span id="badge-lokasi1" class="px-3 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-700">WAIT</span>
+            </div>
+
+            <!-- Kotak Status Lokasi 2 -->
+            <div id="card-lokasi2" class="p-4 rounded-lg border border-gray-200 bg-gray-50 flex justify-between items-center">
+                <div>
+                    <h2 class="font-semibold text-gray-700">ESP32 Lokasi 2</h2>
+                    <p id="status-lokasi2" class="text-sm text-gray-500">Menghubungkan...</p>
+                </div>
+                <span id="badge-lokasi2" class="px-3 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-700">WAIT</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Menghubungkan Web ke HiveMQ Broker via WebSocket Secure (WSS)
+       const client = mqtt.connect('wss://broker.hivemq.com:8883/mqtt');
+
+        const status1 = document.getElementById('status-lokasi1');
+        const badge1 = document.getElementById('badge-lokasi1');
+        const card1 = document.getElementById('card-lokasi1');
+
+        const status2 = document.getElementById('status-lokasi2');
+        const badge2 = document.getElementById('badge-lokasi2');
+        const card2 = document.getElementById('card-lokasi2');
+
+        client.on('connect', function () {
+            console.log('Terhubung ke Broker HiveMQ');
+            // Berlangganan (subscribe) ke topik ESP32 1 dan 2
+            client.subscribe('hasbi/iot/getar/lokasi1', function (err) {
+                if (!err) status1.innerText = "Menunggu data...";
+            });
+            client.subscribe('hasbi/iot/getar/lokasi2', function (err) {
+                if (!err) status2.innerText = "Menunggu data...";
+            });
+        });
+
+        // Aksi ketika data baru masuk dari ESP32
+        client.on('message', function (topic, message) {
+            let msg = message.toString();
+            
+            // Jika data dari Lokasi 1
+            if (topic === 'hasbi/iot/getar/lokasi1') {
+                status1.innerText = msg;
+                if (msg.includes("GETARAN")) {
+                    card1.className = "p-4 rounded-lg border border-red-300 bg-red-50 flex justify-between items-center transition-all duration-300";
+                    badge1.className = "px-3 py-1 text-xs font-bold rounded-full bg-red-500 text-white animate-pulse";
+                    badge1.innerText = "BAHAYA";
+                } else {
+                    card1.className = "p-4 rounded-lg border border-green-300 bg-green-50 flex justify-between items-center transition-all duration-300";
+                    badge1.className = "px-3 py-1 text-xs font-bold rounded-full bg-green-500 text-white";
+                    badge1.innerText = "AMAN";
+                }
+            }
+
+            // Jika data dari Lokasi 2
+            if (topic === 'hasbi/iot/getar/lokasi2') {
+                status2.innerText = msg;
+                if (msg.includes("GETARAN")) {
+                    card2.className = "p-4 rounded-lg border border-red-300 bg-red-50 flex justify-between items-center transition-all duration-300";
+                    badge2.className = "px-3 py-1 text-xs font-bold rounded-full bg-red-500 text-white animate-pulse";
+                    badge2.innerText = "BAHAYA";
+                } else {
+                    card2.className = "p-4 rounded-lg border border-green-300 bg-green-50 flex justify-between items-center transition-all duration-300";
+                    badge2.className = "px-3 py-1 text-xs font-bold rounded-full bg-green-500 text-white";
+                    badge2.innerText = "AMAN";
+                }
+            }
+        });
+    </script>
+</body>
+</html>
